@@ -10,7 +10,7 @@ n_ranks=$((nodes * numproc_node))
 source "${PWD}/scripts/bk_functions.sh"
 
 RESULTS_DIR="${PWD}/results"
-WORK_DIR="${PWD}/sbd_run"
+WORK_DIR=$(mktemp -d "${PWD}/sbd_run.XXXXXX")
 ARTIFACT="${PWD}/artifacts/diag"
 
 mkdir -p "${RESULTS_DIR}"
@@ -21,7 +21,6 @@ if [[ ! -x "${ARTIFACT}" ]]; then
   exit 1
 fi
 
-rm -rf "${WORK_DIR}"
 mkdir -p "${WORK_DIR}"
 
 cp "${PWD}/artifacts/fcidump.txt" "${WORK_DIR}/"
@@ -112,10 +111,10 @@ if ! grep -q "Elapsed time for diagonalization" "${logfile}"; then
   exit 1
 fi
 
-davidson_time=$(grep "Elapsed time for davidson" "${logfile}" | awk '{print $NF}')
-diag_time=$(grep "Elapsed time for diagonalization" "${logfile}" | awk '{print $NF}')
-helper_time=$(grep "Elapsed time for helper construction" "${logfile}" | awk '{print $NF}')
-init_time=$(grep "Elapsed time for init" "${logfile}" | awk '{print $NF}')
+davidson_time=$(grep "Elapsed time for davidson" "${logfile}" | awk '{print $(NF-1)}')
+diag_time=$(grep "Elapsed time for diagonalization" "${logfile}" | awk '{print $(NF-1)}')
+helper_time=$(grep "Elapsed time for helper construction" "${logfile}" | awk '{print $(NF-1)}')
+init_time=$(grep "Elapsed time for init" "${logfile}" | awk '{print $(NF-1)}')
 
 bk_emit_result \
   --fom "${davidson_time}" \

@@ -68,9 +68,9 @@ run_logged "Configuring SBD" "${BUILD_LOG_DIR}/${system}_configure.log" \
 run_logged "Building SBD" "${BUILD_LOG_DIR}/${system}_build.log" \
   cmake --build "${BUILD_DIR}" --target tpb_diag --parallel 8
 
-tpb_bin=$(find "${BUILD_DIR}" -type f -name tpb_diag -perm -u+x | head -n 1)
+tpb_bin=$(find "${BUILD_DIR}" -type f -name diag -perm -u+x | head -n 1)
 if [[ -z "${tpb_bin}" ]]; then
-  tpb_bin=$(find "${BUILD_DIR}" -type f -name tpb_diag | head -n 1)
+  tpb_bin=$(find "${BUILD_DIR}" -type f -name diag | head -n 1)
 fi
 if [[ -z "${tpb_bin}" || ! -f "${tpb_bin}" ]]; then
   echo "SBD tpb_diag executable not found under ${BUILD_DIR}" >&2
