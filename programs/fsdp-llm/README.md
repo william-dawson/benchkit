@@ -29,8 +29,8 @@ variance at initialization: 12.2 for both models).
 
 ## Parameter choices
 
-- **Which model.** Each row runs every model that fits it: RIKYU and Genoa both, the Spark
-  the 1B, Fugaku the 1B below 64 nodes and the 30B from 64.
+- **Which model.** RIKYU rows run both models, the Spark and Genoa the 1B, Fugaku the 1B below
+  64 nodes and the 30B from 64.
 - **Parallelism.** The 30B uses tensor parallel within a node (`--tp` = ranks per node) and
   FSDP2 across nodes: q/k/v and gate/up column-parallel, o and down row-parallel, the
   embedding, `lm_head` and the loss vocab-parallel, sequence parallel for the norms and the
@@ -53,9 +53,9 @@ Every row is this `run.sh`, submitted with `scripts/test_submit.sh` (R-CCS Cloud
 
 | system | hardware | rows | 1B | 30B |
 |---|---|---|---:|---:|
-| RIKYU | 4 x B200, bf16 | 1 / 2 / 4 nodes | 241,797 / 241,104 / 242,128 | 12,359 / 12,365 / 12,358 |
+| RIKYU | 4 x B200, bf16 | 1 / 2 / 4 nodes | 243,083 / 243,081 / 240,640 | 12,586 / 12,554 / 12,368 |
 | RC_DGXSP | GB10 (128 GB unified), bf16 | 1 | 3,549 | - |
-| RC_GENOA | 2 x EPYC 9684X (768 GB), fp32 | 1 | 386 | 13.1 |
+| RC_GENOA | 2 x EPYC 9684X (768 GB), fp32 | 1 | 386 | - |
 | Fugaku | A64FX, fp32 | 4 / 16 nodes | 177.7 / 176.0 | - |
 | Fugaku | | 64 / 128 / 256 nodes | - | 7.6-9.0 / 7.5 / 7.5 |
 
@@ -65,8 +65,10 @@ Every row is this `run.sh`, submitted with `scripts/test_submit.sh` (R-CCS Cloud
   ran 11,613-11,886 at nearly twice the memory.
 - **DGX Spark.** 16 sequences, 82 GB of the 128 GB; 4 and 8 ran 2,738 and 3,131 tokens/s, and
   32 was killed for memory. The 30B (about 450 GB of state with AdamW) does not fit.
-- **Genoa.** 1B: 4 sequences per rank, 340 s steps (1 and 2 ran 274 and 331 tokens/s). 30B:
-  tensor parallel 4 x 4 data-parallel groups, 1 sequence each, 624 s steps, 33 GB per rank.
+- **Genoa.** 1B: 4 sequences per rank, 340 s steps (1 and 2 ran 274 and 331 tokens/s). The 30B
+  fits (tensor parallel 4 x 4 data-parallel groups, 1 sequence each, 33 GB per rank) and ran
+  13.1 tokens/s per node on 2026-11-05, but at 624 s steps a row takes an hour, so Genoa runs
+  the 1B only.
 - **Fugaku.** Normal mode. 1B: 4 sequences per group, 47 s steps, 6.4 GB per rank. 30B:
   1 sequence per group, 4.2-5.2 GB per rank; three 64-node allocations ran 227, 238 and 271 s
   steps with identical losses, and 128 / 256 nodes 272 / 274 s (those two on the previous revision of `run.sh`, with the

@@ -21,7 +21,8 @@ export OMP_NUM_THREADS="${nthreads}" NNODES="${nodes}" TOKENIZERS_PARALLELISM=fa
 case "${system}" in
   RIKYU) RUNS=("1b 1 16" "30b 4 64"); dtype=bf16 ;;
   RC_DGXSP) RUNS=("1b 1 16"); dtype=bf16 ;;
-  RC_GENOA) RUNS=("1b 1 4" "30b 4 1"); dtype=fp32 ;;
+  # The 30B fits Genoa's 768 GB but takes an hour a row at 13 tokens/s (README, "Results").
+  RC_GENOA) RUNS=("1b 1 4"); dtype=fp32 ;;
   # 30B needs about 64 nodes of A64FX memory.
   Fugaku) if (( nodes >= 64 )); then RUNS=("30b 4 1"); else RUNS=("1b 4 4"); fi; dtype=fp32 ;;
   *) echo "Unknown system: ${system}" >&2; exit 1 ;;
