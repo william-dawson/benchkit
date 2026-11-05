@@ -32,19 +32,22 @@ train() {  # train <logfile> <llm_train.py arguments...>: launch on this system;
   case "${system}" in
     RIKYU)
       module load cuda/13.2.2
-      # One torchrun agent per node; --ntasks pins one task per node in a 4-tasks-per-node allocation.
+      # One torch.distributed.run agent per node, with the CPUs of all its workers: --ntasks pins
+      # one task per node in a 4-tasks-per-node allocation, which would otherwise inherit one
+      # task's --cpus-per-task.
       MASTER_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
-      srun --ntasks="${nodes}" --ntasks-per-node=1 "${ARTIFACT_DIR}/venv/bin/torchrun" --nnodes="${nodes}" \
+      srun --ntasks="${nodes}" --ntasks-per-node=1 --cpus-per-task=$((numproc_node * nthreads)) \
+        "${ARTIFACT_DIR}/venv/bin/python" -m torch.distributed.run --nnodes="${nodes}" \
         --nproc_per_node="${numproc_node}" --rdzv_backend=c10d --rdzv_endpoint="${MASTER_ADDR}:29500" \
         "${ARTIFACT_DIR}/llm_train.py" "$@" --backend nccl > "${log}" 2>&1
       ;;
     RC_DGXSP)
       # Unified memory: expandable segments keep the allocator from fragmenting it.
-      PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True "${ARTIFACT_DIR}/venv/bin/torchrun" --standalone \
+      PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True "${ARTIFACT_DIR}/venv/bin/python" -m torch.distributed.run --standalone \
         --nproc_per_node="${numproc_node}" "${ARTIFACT_DIR}/llm_train.py" "$@" --backend nccl > "${log}" 2>&1
       ;;
     RC_GENOA)
-      "${ARTIFACT_DIR}/venv/bin/torchrun" --standalone --nproc_per_node="${numproc_node}" \
+      "${ARTIFACT_DIR}/venv/bin/python" -m torch.distributed.run --standalone --nproc_per_node="${numproc_node}" \
         "${ARTIFACT_DIR}/llm_train.py" "$@" --backend gloo > "${log}" 2>&1
       ;;
     Fugaku)

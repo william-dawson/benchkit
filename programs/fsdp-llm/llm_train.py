@@ -178,7 +178,8 @@ def main():
     t_model = time.perf_counter() - t0
     log(rank, event="setup", model=a.model, params=nparams, world=world, tp=a.tp, dp=dp_size, sp=a.sp,
         checkpointing=a.checkpointing, dtype=a.dtype, seq=a.seq, micro_batch=a.micro_batch, backend=a.backend,
-        threads=torch.get_num_threads(), t_import_s=round(t_import, 2), t_process_group_s=round(t_pg, 2),
+        threads=torch.get_num_threads(), cpus=len(os.sched_getaffinity(0)),
+        gpus=torch.cuda.device_count() if gpu else 0, t_import_s=round(t_import, 2), t_process_group_s=round(t_pg, 2),
         t_model_s=round(t_model, 2))
 
     gen = torch.Generator().manual_seed(1 + dp_rank)  # one batch per data-parallel rank
