@@ -355,6 +355,21 @@ bk_source_adjustment demo reason Makefile_target.inc bash -c 'exit 19'
                                if entry["path"] == "Makefile_target.inc"]
                     self.assertIn("compiler = FCC\n", config["content"])
 
+    def test_source_path_under_a_symlinked_directory(self):
+        real = self.root / "real"
+        (real / "source/src").mkdir(parents=True)
+        (real / "source/src/file.py").write_text("x\n")
+        (real / "outside.py").write_text("x\n")
+        (real / "source/src/escape.py").symlink_to(real / "outside.py")
+        (self.root / "link").symlink_to(real, target_is_directory=True)
+        script = self.repo / "scripts/common/source_bundle.sh"
+        for path, expected in (("src/file.py", 0), ("src/escape.py", 1), ("../outside.py", 1)):
+            with self.subTest(path=path):
+                result = subprocess.run(
+                    ["bash", "-c", f'source "{script}"; BK_SOURCE_DIR="{self.root}/link/source" _bk_source_path "{path}"'],
+                    text=True, capture_output=True)
+                self.assertEqual(result.returncode, expected, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

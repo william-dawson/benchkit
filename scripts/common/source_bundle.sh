@@ -48,7 +48,8 @@ _bk_bundle_path() {
 
 _bk_source_path() {
   _bk_bundle_path "$1" || return 1
-  case "$(realpath -m "$BK_SOURCE_DIR/$1")" in "$BK_SOURCE_DIR"/*) ;; *) return 1 ;; esac
+  # Both sides resolved: the source directory may sit under a symlink (Fugaku's /vol0200).
+  case "$(realpath -m "$BK_SOURCE_DIR/$1")" in "$(realpath -m "$BK_SOURCE_DIR")"/*) ;; *) return 1 ;; esac
 }
 
 # The inventory covers names, modes and bytes, and rejects links and special files.
