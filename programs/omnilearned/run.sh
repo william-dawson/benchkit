@@ -70,13 +70,15 @@ case "${system}" in
     # torchrun replaces the repo's srun-based shell/run.sh: ddp_setup() reads
     # only RANK/LOCAL_RANK/WORLD_SIZE. Multi-node is one agent per node; the
     # inner srun pins --ntasks to the node count, or a 4-tasks-per-node
-    # allocation launches an agent per task and the rendezvous collapses.
+    # allocation launches an agent per task and the rendezvous collapses. The
+    # agent gets the CPUs of all its workers; otherwise it inherits one task's
+    # --cpus-per-task and the node's workers share it.
     if [[ "${nodes}" -eq 1 ]]; then
       "${VENV}/bin/python" -m torch.distributed.run --standalone --nproc_per_node="${n_ranks}" \
         -m omnilearned.cli train --config "${CONFIG}" > "${logfile}" 2>&1 || status=$?
     else
       MASTER_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
-      srun --ntasks="${nodes}" --ntasks-per-node=1 \
+      srun --ntasks="${nodes}" --ntasks-per-node=1 --cpus-per-task=$((numproc_node * nthreads)) \
         "${VENV}/bin/python" -m torch.distributed.run --nnodes="${nodes}" --nproc_per_node="${numproc_node}" \
         --node_rank="${SLURM_NODEID}" --rdzv_backend=c10d --rdzv_endpoint="${MASTER_ADDR}:29500" \
         -m omnilearned.cli train --config "${CONFIG}" > "${logfile}" 2>&1 || status=$?
@@ -103,6 +105,8 @@ case "${system}" in
         python -m omnilearned.cli train --config /work/omnilearned_bench.yaml > "${log}" 2>&1' || status=$?
     ;;
 esac
+# The full log goes with the results whether or not the run succeeded.
+cp "${logfile}" "${RESULTS_DIR}/train.log" || true
 
 # Require both a clean launcher exit and the app's own completion line: a
 # crashed rank can still let the launcher exit 0, and upstream keeps writing
@@ -131,5 +135,3 @@ bk_emit_result \
   --nodes "${nodes}" \
   --numproc-node "${numproc_node}" \
   --nthreads "${nthreads}" >> "${RESULTS_DIR}/result"
-
-cp "${logfile}" "${RESULTS_DIR}/train.log"
